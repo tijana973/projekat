@@ -1,5 +1,5 @@
 # Projekat-Barbershop problem
-##Opis problema:
+## Opis problema:
 
 Berbernica ima jednu berbersku stolicu i čekaonicu sa ograničenim brojem stolica (n).
 Berberin radi samo kada ima mušterija. Ako nema mušterija, on zaspi.
@@ -9,8 +9,8 @@ Ako ima slobodnih stolica, mušterija seda i čeka da bude na redu.
 Ako je berberin zaspao, mušterija ga budi.
 Cilj problema je da se sinhronizuje ponašanje berberina i mušterija kako bi se izbegli konflikti, kao što su preklapanje operacija ili gubitak mušterija zbog loše organizacije.
 
-##Objasnjenje koda
-###POSIX semafori i mutex
+## Objasnjenje koda
+### POSIX semafori i mutex
 sem_t cekaonica;   // Semafor za broj slobodnih stolica
 sem_t barberChair;   // Semafor za frizersku stolicu
 sem_t barberReady;   // Semafor za obaveštavanje frizera
