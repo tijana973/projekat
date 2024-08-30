@@ -7,25 +7,33 @@
 #define MAX_BROJ_MUSTERIJA 10
 #define BROJ_STOLICA 3
 
+// Globalni POSIX semafori i mutex
+sem_t waitingRoom;   // Semafor za broj slobodnih stolica
+sem_t barberChair;   // Semafor za frizersku stolicu
+sem_t barberReady;   // Semafor za obaveštavanje frizera
+sem_t done;           // Semafor za kraj
+pthread_mutex_t mutex; // Mutex za pristup deljenim resursima
 
-sem_t cekaonica;   
-sem_t barberChair;   
-sem_t barberReady;   
-pthread_mutex_t mutex; 
+int cekanje = 0;
 
-int vreme=0;
+// Funkcija za frizera
 void* barberT(void* arg) {
     while (1) {
+        // Proverava da li treba da završi rad
+        if (sem_trywait(&done) == 0) {
+            printf("Frizer: Završava rad.\n");
+            break; // Izlazi iz petlje i završava rad
+        }
         // Čeka klijenta da se pojavi
         sem_wait(&barberReady);
 
         // Izvršava friziranje
         pthread_mutex_lock(&mutex);
-        vreme--;
-        printf("Frizer: Počeo friziranje klijenta. Vreme čekanja: %d\n", vreme);
+        cekanje--;
+        printf("Frizer: Počeo šišanje klijenta. Broj klijenata koji čekaju: %d\n", cekanje);
         pthread_mutex_unlock(&mutex);
 
-        // Klijent je friziran
+        
         sleep(3);  // Simulacija vremena friziranja
 
         // Oslobađa stolicu za sledećeg klijenta
@@ -34,15 +42,15 @@ void* barberT(void* arg) {
     return NULL;
 }
 
-
+// Funkcija za klijenta
 void* customerT(void* arg) {
     int id = (intptr_t)arg;
 
     // Pokušava da zauzme mesto u čekaonici
-    if (sem_trywait(&cekaonica) == 0) {
+    if (sem_trywait(&waitingRoom) == 0) {
         pthread_mutex_lock(&mutex);
-        vreme++;
-        printf("Klijent %d: Ušao u čekaonicu. Vreme čekanja: %d\n", id, vreme);
+        cekanje++;
+        printf("Klijent %d: Ušao u čekaonicu. Broj čekanja: %d\n", id, cekanje);
         pthread_mutex_unlock(&mutex);
 
         // Signalizira frizeru da je spreman
@@ -50,13 +58,13 @@ void* customerT(void* arg) {
 
         // Čeka da frizer završi
         sem_wait(&barberChair);
-        printf("Klijent %d: Započeo friziranje.\n", id);
+        printf("Klijent %d: Započeo šišanje.\n", id);
 
-        // Odlazi nakon friziranja
-        printf("Klijent %d: Završio friziranje i odlazi.\n", id);
+        
+        printf("Klijent %d: Završio šišanje i odlazi.\n", id);
 
         // Oslobađa mesto u čekaonici
-        sem_post(&cekaonica);
+        sem_post(&waitingRoom);
     } else {
         printf("Klijent %d: Čekaonica puna. Odlazi.\n", id);
     }
@@ -68,35 +76,37 @@ int main() {
     pthread_t barber;
     pthread_t musterije[MAX_BROJ_MUSTERIJA];
 
-    
-    sem_init(&cekaonica, 0, BROJ_STOLICA);
+    // Inicijalizacija semafora i mutex-a
+    sem_init(&waitingRoom, 0, BROJ_STOLICA);
     sem_init(&barberChair, 0, 1);
     sem_init(&barberReady, 0, 0);
     pthread_mutex_init(&mutex, NULL);
+    sem_init(&done, 0, 0);
 
-    
+    // Kreiranje niti za frizera
     pthread_create(&barber, NULL, barberT, NULL);
 
-    
+    // Kreiranje niti za klijente
     for (int i = 0; i < MAX_BROJ_MUSTERIJA; i++) {
         pthread_create(&musterije[i], NULL, customerT, (void *)(intptr_t)(i + 1));
-        sleep(1);  
+        sleep(1);  // Klijenti dolaze u regularnim intervalima
     }
 
-    
+    // Čeka da se sve niti završe
     for (int i = 0; i < MAX_BROJ_MUSTERIJA; i++) {
         pthread_join(musterije[i], NULL);
     }
 
-    
-    pthread_cancel(barber);
+    // Prekida rad frizera 
+    sem_post(&done);
     pthread_join(barber, NULL);
 
-    
-    sem_destroy(&cekaonica);
+    // Uništava semafore i mutex
+    sem_destroy(&waitingRoom);
     sem_destroy(&barberChair);
     sem_destroy(&barberReady);
     pthread_mutex_destroy(&mutex);
+    sem_destroy(&done);
 
     printf("\nKraj programa\n");
     return 0;
