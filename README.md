@@ -12,9 +12,13 @@ Cilj problema je da se sinhronizuje ponašanje berberina i mušterija kako bi se
 ## Objasnjenje koda
 ### POSIX semafori i mutex
 sem_t cekaonica;   // Semafor za broj slobodnih stolica
+
 sem_t barberChair;   // Semafor za frizersku stolicu
+
 sem_t barberReady;   // Semafor za obaveštavanje frizera
+
 pthread_mutex_t mutex; // Mutex za pristup deljenim resursima
+
 int cekanje; // Broj klijenata koji čekaju
 
 ### Funkcije
